@@ -1,0 +1,203 @@
+/*
+  Nathan Nguyen
+  CSC 352
+  Assignment 1
+  September 20th, 2021
+*/
+
+-- 1
+SELECT EMPLOYEE_ID, FIRST_NAME || ' ' || LAST_NAME as FULL_NAME, JOB_ID, SALARY
+    FROM EMPLOYEES 
+    WHERE DEPARTMENT_ID = 60;
+    
+-- 2
+SELECT FIRST_NAME || ' ' || LAST_NAME as FULL_NAME, EMPLOYEES.DEPARTMENT_ID, DEPARTMENTS.DEPARTMENT_NAME, SALARY
+    FROM EMPLOYEES LEFT OUTER JOIN DEPARTMENTS
+        ON EMPLOYEES.DEPARTMENT_ID = DEPARTMENTS.DEPARTMENT_ID
+    WHERE EMPLOYEES.JOB_ID = 'IT_PROG';
+    
+-- 3
+SELECT DEPARTMENTS.DEPARTMENT_ID, DEPARTMENTS.DEPARTMENT_NAME, COUNT(DISTINCT EMPLOYEE_ID)
+    FROM DEPARTMENTS JOIN EMPLOYEES
+        ON DEPARTMENTS.DEPARTMENT_ID = EMPLOYEES.DEPARTMENT_ID
+    HAVING COUNT(DISTINCT EMPLOYEE_ID) <> 0
+    GROUP BY DEPARTMENTS.DEPARTMENT_ID, DEPARTMENTS.DEPARTMENT_NAME
+    ORDER BY COUNT(DISTINCT EMPLOYEE_ID);
+
+-- 4
+SELECT A.FIRST_NAME || ' ' || A.LAST_NAME as FULL_NAME, B.FIRST_NAME || ' ' || B.LAST_NAME as MANAGER_NAME
+    FROM EMPLOYEES A JOIN EMPLOYEES B
+        ON A.MANAGER_ID = B.EMPLOYEE_ID
+    WHERE A.DEPARTMENT_ID IS NULL;
+    
+-- 5
+SELECT DEPARTMENT_ID, MAX(SALARY + SALARY * NVL(COMMISSION_PCT, 0)) as HIGHEST_SALARY, MIN(SALARY + SALARY * NVL(COMMISSION_PCT, 0)) as LOWEST_SALARY
+    FROM EMPLOYEES
+    WHERE DEPARTMENT_ID IS NOT NULL
+    GROUP BY DEPARTMENT_ID;
+
+-- 6
+SELECT EMPLOYEE_ID, LAST_NAME, FIRST_NAME, DEPARTMENT_ID
+    FROM EMPLOYEES
+    WHERE LAST_NAME IN (
+        SELECT LAST_NAME
+            FROM EMPLOYEES
+            GROUP BY LAST_NAME
+            HAVING COUNT(*) > 1
+        );
+        
+-- 7
+SELECT LAST_NAME, FIRST_NAME, EMPLOYEES.MANAGER_ID, DEPARTMENTS.MANAGER_ID
+    FROM EMPLOYEES FULL OUTER JOIN DEPARTMENTS
+        ON EMPLOYEES.DEPARTMENT_ID = DEPARTMENTS.DEPARTMENT_ID
+    WHERE EMPLOYEES.DEPARTMENT_ID IN (10,20,30,40,60)
+    AND EMPLOYEES.MANAGER_ID != DEPARTMENTS.MANAGER_ID;
+    
+-- 8
+SELECT LAST_NAME, FIRST_NAME, SALARY + SALARY * NVL(COMMISSION_PCT, 0) AS SALARY, EMPLOYEES.DEPARTMENT_ID
+    FROM EMPLOYEES, DEPARTMENTS
+    WHERE EMPLOYEE_ID IN DEPARTMENTS.MANAGER_ID
+    AND EMPLOYEE_ID NOT IN EMPLOYEES.MANAGER_ID;
+
+-- 9
+declare
+    l_name EMPLOYEES.LAST_NAME%type;
+    sal EMPLOYEES.SALARY%type;
+
+begin
+    l_name := 'Jackson';
+    sal := 8888;
+    dbms_output.put_line('Last Name: ' || l_name);
+    dbms_output.put_line('Salary: ' || TO_CHAR(sal, '$9,999.99'));
+
+end;
+
+-- 10
+<<OUTER_BLOCK>>
+declare
+    counter integer := 1;
+    name varchar2(30) := 'Fred';
+    
+begin
+    <<INNER_BLOCK>>
+    declare
+        counter integer := 99;
+    begin
+        dbms_output.put_line('Outer Counter: ' || OUTER_BLOCK.counter);
+        dbms_output.put_line('Inner Counter: ' || counter);
+        dbms_output.put_line('Name: ' || OUTER_BLOCK.name);
+    end;
+end;
+
+/*OUTPUT*/
+-- 1
+EMPLOYEE_ID FULL_NAME                                      JOB_ID         SALARY
+----------- ---------------------------------------------- ---------- ----------
+        103 Alexander Hunold                               IT_PROG          9000
+        104 Bruce Ernst                                    IT_PROG          6000
+        105 David Austin                                   IT_PROG          4800
+        106 Valli Pataballa                                IT_PROG          4800
+        107 Diana Lorentz                                  IT_PROG          4200
+
+-- 2
+FULL_NAME                                      DEPARTMENT_ID DEPARTMENT_NAME                    SALARY
+---------------------------------------------- ------------- ------------------------------ ----------
+Alexander Hunold                                          60 IT                                   9000
+Bruce Ernst                                               60 IT                                   6000
+David Austin                                              60 IT                                   4800
+Valli Pataballa                                           60 IT                                   4800
+Diana Lorentz                                             60 IT                                   4200
+
+-- 3
+DEPARTMENT_ID DEPARTMENT_NAME                COUNT(DISTINCTEMPLOYEE_ID)
+------------- ------------------------------ --------------------------
+           70 Public Relations                                        1
+           10 Administration                                          1
+           40 Human Resources                                         1
+           20 Marketing                                               2
+          110 Accounting                                              2
+           90 Executive                                               3
+           60 IT                                                      5
+           30 Purchasing                                              6
+          100 Finance                                                 6
+           80 Sales                                                  34
+           50 Shipping                                               45
+
+11 rows selected. 
+
+-- 4
+FULL_NAME                                      MANAGER_NAME                                  
+---------------------------------------------- ----------------------------------------------
+Kimberely Grant                                Eleni Zlotkey                                 
+
+-- 5
+DEPARTMENT_ID HIGHEST_SALARY LOWEST_SALARY
+------------- -------------- -------------
+           50           8200          2100
+           40           6500          6500
+          110          12000          8300
+           90          24000         17000
+           30          11000          2500
+           70          10000         10000
+           10           4400          4400
+           20          13000          6000
+           60           9000          4200
+          100          12000          6900
+           80          19600          6710
+
+11 rows selected. 
+
+-- 6
+EMPLOYEE_ID LAST_NAME                 FIRST_NAME           DEPARTMENT_ID
+----------- ------------------------- -------------------- -------------
+        148 Cambrault                 Gerald                          80
+        154 Cambrault                 Nanette                         80
+        178 Grant                     Kimberely                         
+        199 Grant                     Douglas                         50
+        176 Taylor                    Jonathon                        80
+        180 Taylor                    Winston                         50
+        100 King                      Steven                          90
+        156 King                      Janette                         80
+        159 Smith                     Lindsey                         80
+        171 Smith                     William                         80
+
+10 rows selected. 
+
+-- 7
+LAST_NAME                 FIRST_NAME           MANAGER_ID MANAGER_ID
+------------------------- -------------------- ---------- ----------
+Hunold                    Alexander                   102        103
+Raphaely                  Den                         100        114
+Whalen                    Jennifer                    101        200
+Hartstein                 Michael                     100        201
+Mavris                    Susan                       101        203
+
+-- 8
+LAST_NAME                 FIRST_NAME               SALARY DEPARTMENT_ID
+------------------------- -------------------- ---------- -------------
+Whalen                    Jennifer                   4400            10
+Hartstein                 Michael                   13000            20
+Raphaely                  Den                       11000            30
+Mavris                    Susan                      6500            40
+Fripp                     Adam                       8200            50
+Hunold                    Alexander                  9000            60
+Baer                      Hermann                   10000            70
+Russell                   John                      19600            80
+Greenberg                 Nancy                     12000           100
+Higgins                   Shelley                   12000           110
+
+10 rows selected. 
+
+-- 9
+Last Name: Jackson
+Salary:  $8,888.00
+
+PL/SQL procedure successfully completed.
+
+-- 10
+Outer Counter: 1
+Inner Counter: 99
+Name: Fred
+
+
+PL/SQL procedure successfully completed.

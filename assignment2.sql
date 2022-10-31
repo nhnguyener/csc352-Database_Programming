@@ -1,0 +1,279 @@
+/*
+  Nathan Nguyen
+  CSC 352
+  Assignment 2
+  September 27th, 2021
+*/
+
+-- 1
+set serveroutput on;
+
+DECLARE
+	sal integer;
+	salTotal integer := 0;
+	salAvg integer := 0;
+	
+    deptID integer;
+	emplCount integer := 0;
+	
+	cursor salPtr is SELECT SALARY, DEPARTMENT_ID FROM EMPLOYEES;
+BEGIN
+	open salPtr;
+	
+	loop
+		fetch salPtr into sal, deptID;
+		if salPtr%found then 
+            --dbms_output.put_line( 'Current Salary: ' || sal );
+            if deptID = 60 then
+                if sal > 4800 then
+                    salTotal := salTotal + sal;
+                else
+                    salTotal := salTotal + 4800;
+                end if;
+			
+                emplCount := emplCount + 1;
+            end if;
+		else 
+			exit;
+		end if;
+	end loop;
+	
+	salAvg := salTotal/emplCount;
+    --dbms_output.put_line( 'Total Salaries: ' || salTotal );
+    --dbms_output.put_line( 'Total Employees: ' || emplCount );
+    dbms_output.put_line( 'Average Salary: ' || salAvg );
+	
+	close salPtr;
+END;
+
+-- 2
+DECLARE
+    deptID DEPARTMENTS.DEPARTMENT_ID%type;
+    deptName DEPARTMENTS.DEPARTMENT_NAME%type;
+    deptMngrID DEPARTMENTS.MANAGER_ID%type;
+    deptLocID DEPARTMENTS.LOCATION_ID%type;
+
+BEGIN
+	INSERT INTO DEPARTMENTS(DEPARTMENT_ID, DEPARTMENT_NAME, MANAGER_ID, LOCATION_ID)
+        VALUES( 999, 'Test', 145, 1700 );
+    SELECT DEPARTMENT_ID, DEPARTMENT_NAME, MANAGER_ID, LOCATION_ID INTO deptID, deptName, deptMngrID, deptLocID
+        FROM DEPARTMENTS
+        WHERE DEPARTMENT_ID = 999;
+    
+    dbms_output.put_line('[NEW RECORD INSERTED]');
+    dbms_output.put_line('Department ID: ' || deptID);
+    dbms_output.put_line('Department Name: ' || deptName); 
+    dbms_output.put_line('Manager ID: ' || deptMngrID);
+    dbms_output.put_line('Location ID: ' || deptLocID);
+    
+    COMMIT;
+END;
+
+-- 3
+DECLARE
+    deptName DEPARTMENTS.DEPARTMENT_NAME%type;
+    deptMngrID DEPARTMENTS.MANAGER_ID%type;
+    
+BEGIN
+    DELETE FROM DEPARTMENTS
+    WHERE DEPARTMENT_ID = 999
+    RETURNING DEPARTMENT_NAME, MANAGER_ID
+    INTO deptName, deptMngrID;
+    
+    dbms_output.put_line('Department Name: ' || deptName);
+    dbms_output.put_line('Manager ID: ' || deptMngrID);
+
+END;
+
+-- 4
+DECLARE
+    emplCounter integer := 0;
+    
+    emplID EMPLOYEES.EMPLOYEE_ID%type;
+    emplLName EMPLOYEES.LAST_NAME%type;
+    deptID EMPLOYEES.DEPARTMENT_ID%type;
+    
+    emplIDUpdate EMPLOYEES.EMPLOYEE_ID%type;
+    emplLNameUpdate EMPLOYEES.LAST_NAME%type;
+
+    cursor emplPtr is SELECT EMPLOYEE_ID, LAST_NAME, DEPARTMENT_ID FROM EMPLOYEES;
+BEGIN
+    open emplPtr;
+    
+    loop
+        fetch emplPtr into emplID, emplLName, deptID;
+        if emplPtr%found then
+            if deptID IS NULL then
+                emplCounter := emplCounter + 1;
+                emplIDUpdate := emplID;
+                emplLNameUpdate := emplLName;
+                dbms_output.put_line('Unassigned employee found.');
+            end if;
+        else
+            exit;
+        end if;
+    end loop;
+    
+    SAVEPOINT save1;
+    
+    if emplCounter > 1 then
+        dbms_output.put_line('Number of employees with unassigned departments > 2');
+    elsif emplCounter = 1 then
+        UPDATE EMPLOYEES
+        SET DEPARTMENT_ID = 30
+        WHERE EMPLOYEE_ID = emplIDUpdate;
+        dbms_output.put_line('Employee ' || emplLNameUpdate || ', ID-' || emplIDUpdate || ' has been updated.');
+        
+        ROLLBACK TO save1;
+
+    end if;
+    
+    close emplPtr;
+END;
+
+-- 5
+DECLARE
+    emplCount EMPLOYEES.SALARY%type := 0;
+
+    salCurr EMPLOYEES.SALARY%type;
+    salTotal EMPLOYEES.SALARY%type := 0;
+    salAvg EMPLOYEES.SALARY%type;
+    
+    cursor emplPtr is SELECT SALARY FROM EMPLOYEES;
+BEGIN
+    open emplPtr;
+    
+    loop
+        fetch emplPtr into salCurr;
+        if emplPtr%found then
+            salTotal := salTotal + salCurr;
+            emplCount := emplCount + 1;
+        else
+            exit;
+        end if;
+    end loop;
+    
+    salAvg := salTotal/emplCount;
+    --dbms_output.put_line(salAvg);
+    
+    case
+        when salAvg >= 7000.00 then dbms_output.put_line('high');
+        when salAvg between 5000.00 and 6999.00 then dbms_output.put_line('ok');
+        when salAvg < 5000 then dbms_output.put_line('low');
+        else NULL;
+    end case;
+    
+    close emplPtr;
+END;
+
+-- 6
+DECLARE
+    selectedEmplID EMPLOYEES.EMPLOYEE_ID%type := 112;
+    emplID EMPLOYEES.EMPLOYEE_ID%type;
+    emplSal EMPLOYEES.SALARY%type;
+    emplHireDate EMPLOYEES.HIRE_DATE%type;
+    emplTime integer;
+    bonus EMPLOYEES.SALARY%type := 900;
+
+    cursor emplPtr is SELECT EMPLOYEE_ID, SALARY, HIRE_DATE FROM EMPLOYEES;
+
+BEGIN
+    open emplPtr;
+    
+    loop
+        fetch emplPtr into emplID, emplSal, emplHireDate;
+        if emplPtr%found then
+            if emplID = selectedEmplID then
+                emplTime := floor( months_between(sysdate, emplHireDate)/12 );
+                if emplTime >= 24 then
+                    bonus := bonus + 500;
+                end if;
+                
+                if emplSal > 10000 then
+                    bonus := bonus + 1300;
+                elsif emplSal between 5000 and 10000 then
+                    bonus := bonus + 1100;
+                elsif emplSal < 5000 then
+                    bonus := bonus + 1000;
+                end if;
+            end if;
+        else
+            exit;
+        end if;
+    end loop;
+    
+    dbms_output.put_line('Bonus for Employee ID-' || selectedEmplID || ' is $' || bonus);
+    
+    close emplPtr;
+END;
+
+-- 7
+DECLARE
+    loopCounter NUMBER := 101;
+BEGIN
+    loop
+        if loopCounter > 103 then
+            exit;
+        end if;
+        dbms_output.put_line(loopCounter);
+        loopCounter := loopCounter + 1;
+    end loop;
+END;
+        
+BEGIN
+    for forLoopCounter in 101..103
+    loop
+        dbms_output.put_line(forLoopCounter);
+    end loop;
+END;
+
+DECLARE
+    whileLoopCounter NUMBER := 101;
+BEGIN
+    while whileLoopCounter < 104
+        loop
+            dbms_output.put_line(whileLoopCounter);
+            whileLoopCounter := whileLoopCounter + 1;
+        end loop;
+END;
+
+-- 8
+BEGIN
+    SAVEPOINT save1;
+    
+    UPDATE EMPLOYEES
+    SET SALARY = ( SALARY + ( SALARY*.08 ) )
+    WHERE DEPARTMENT_ID = 60 AND SALARY <= 5000;
+    dbms_output.put_line(SQL%ROWCOUNT);
+    
+    DELETE FROM EMPLOYEES
+    WHERE DEPARTMENT_ID IS NULL;
+    dbms_output.put_line(SQL%ROWCOUNT);
+    
+    ROLLBACK TO save1;
+    
+END;
+
+-- 9
+DECLARE
+    emplID EMPLOYEES.EMPLOYEE_ID%type;
+    emplFullName EMPLOYEES.FIRST_NAME%type;
+    emplFirstName EMPLOYEES.FIRST_NAME%type;
+    emplLastName EMPLOYEES.LAST_NAME%type;
+    emplSal EMPLOYEES.SALARY%type;
+    
+    cursor emplPtr is SELECT EMPLOYEE_ID, FIRST_NAME, LAST_NAME, SALARY FROM EMPLOYEES WHERE DEPARTMENT_ID = 80 ORDER BY SALARY DESC;
+
+BEGIN
+    open emplPtr;
+    
+    for loopCounter in 0..3
+    loop
+        fetch emplPtr into emplID, emplFirstName, emplLastName, emplSal;
+        dbms_output.put_line('ID-' || emplID);
+        dbms_output.put_line('Name: ' || emplFirstName || ' ' || emplLastName);
+        dbms_output.put_line('Salary: $' || emplSal);
+    end loop;
+    
+    close emplPtr;
+END;
